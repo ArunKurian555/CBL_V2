@@ -1,0 +1,16 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "7cb25cfd-05c0-4cea-8853-5b44da47c984": {
+      "ProjectGuid": "7cb25cfd-05c0-4cea-8853-5b44da47c984",
+      "DisplayName": "CBL_V2",
+      "ColorIndex": 0
+    },
+    "f222d111-0996-4bf7-8021-af897f7d2f4f": {
+      "ProjectGuid": "f222d111-0996-4bf7-8021-af897f7d2f4f",
+      "DisplayName": "CBL",
+      "ColorIndex": 1
+    }
+  },
+  "NextColorIndex": 2
+}
