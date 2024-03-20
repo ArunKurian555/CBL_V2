@@ -15,9 +15,11 @@ namespace CBL_V2
     public class ControlSystem : CrestronControlSystem
     {
         Xlsheet xlsheet = new Xlsheet();
-        string FilePath = "/nvram/CB/Settings.xlsx";
-        ThreeSeriesTcpIpEthernetIntersystemCommunications[] links = new ThreeSeriesTcpIpEthernetIntersystemCommunications[5];
+        string FilePath = "/nvram/Settings.xlsx";
+        ThreeSeriesTcpIpEthernetIntersystemCommunications[] links = new ThreeSeriesTcpIpEthernetIntersystemCommunications[7];
         ThreeSeriesTcpIpEthernetIntersystemCommunications[] scenes = new ThreeSeriesTcpIpEthernetIntersystemCommunications[8];
+        private ThreeSeriesTcpIpEthernetIntersystemCommunications nameSave;
+
         uint numberOfZones = 250;
         bool[] activeZones = new bool[250];
         string[,] sceneData, zoneAreaData, tempdata;
@@ -29,7 +31,8 @@ namespace CBL_V2
             {
                 Thread.MaxNumberOfUserThreads = 20;
 
-                CrestronConsole.AddNewConsoleCommand(RET, "Read", "Output the file content.", ConsoleAccessLevelEnum.AccessAdministrator);
+
+                CrestronConsole.AddNewConsoleCommand(RET, "Read", "Output the file content.", ConsoleAccessLevelEnum.AccessOperator);
 
 
             }
@@ -38,34 +41,6 @@ namespace CBL_V2
                 ErrorLog.Error("Error in the constructor: {0}", e.Message);
             }
         }
-        private void InfoRet()
-        {
-
-            try  // Scene Retrieve
-            {
-
-                // RET Excel with 1st Row and Column as index 0,0
-                sceneData = xlsheet.ReadExcel(FilePath, 0);
-                zoneAreaData = xlsheet.ReadExcel(FilePath, 1);
-            }
-            catch (Exception ex)
-            {
-                CrestronConsole.PrintLine(ex.ToString());
-            }
-        }
-        private void RET(string args)
-        {
-
-            tempdata = xlsheet.ReadExcel(FilePath, 1);
-
-
-            for (uint i = 0; i < 51; i++)
-            {
-                CrestronConsole.PrintLine(tempdata[1, i].ToString());
-            }
-
-        }
-
 
 
         private void ZoneAreaWrite(uint areanumber, uint k, uint areaIndex)
@@ -118,8 +93,9 @@ namespace CBL_V2
 
 
             }
-            catch
+            catch (Exception e)
             {
+                CrestronConsole.PrintLine("Error in READING : {0}", e.Message);
             }
 
 
@@ -268,57 +244,67 @@ namespace CBL_V2
 
 
 
-                        #region Zone area E1 to E4
 
-
-                        #region Number of Areas
-
-                        #region Set and Save
-
-                        if (links[3].BooleanOutput[2000].BoolValue == true)
+                        #region Name D0
+                        // Save
+                        if (nameSave.BooleanOutput[args.Sig.Number].BoolValue == true)
                         {
-                            numberOfAreas = Convert.ToUInt16(links[3].StringOutput[1].StringValue);
-                            links[3].UShortInput[1].UShortValue = numberOfAreas;
-
-                            for (uint i = 0; i < 50; i++)
+                            for (uint i = 1; i < 351; i++)
                             {
-                                if (i < numberOfAreas)
+                                if (nameSave.BooleanOutput[i].BoolValue == true)
                                 {
-                                    links[3].BooleanInput[i + 2000].BoolValue = true;
-                                    zoneAreaData[1, i + 1] = "1";
-                                }
-                                else
-                                {
-                                    links[3].BooleanInput[i + 2000].BoolValue = false;
-                                    zoneAreaData[1, i + 1] = "0";
+
+                                    if (i < 251)
+                                        zoneAreaData[i + 1, 0] = nameSave.StringOutput[1].StringValue;
+
+                                    if (i > 250)
+                                        zoneAreaData[0, i - 250] = nameSave.StringOutput[1].StringValue;
+
                                 }
                             }
                             xlsheet.WriteExcel(zoneAreaData, FilePath, 1);
                         }
+
+                        if (nameSave.BooleanOutput[501].BoolValue == true)
+
+                            for (uint i = 1; i < 351; i++)
+                            {
+
+                                if (i < 251)
+                                    nameSave.StringInput[i].StringValue = zoneAreaData[i + 1, 0];
+
+                                if (i > 250)
+                                    nameSave.StringInput[i].StringValue = zoneAreaData[0, i - 250];
+
+
+                            }
+
+
                         #endregion
+
 
                         #region Retrieve
 
                         ushort numberOfArea = 0;
-                        if (links[3].BooleanOutput[2001].BoolValue == true)
+                        if (nameSave.BooleanOutput[2001].BoolValue == true)
                         {
                             try
                             {
 
 
-                                for (uint i = 0; i < 50; i++)
+                                for (uint i = 0; i < 100; i++)
                                 {
                                     if (zoneAreaData[1, i + 1].ToString() == "1")
 
                                     {
-                                        links[3].BooleanInput[i + 2000].BoolValue = true;
+                                        nameSave.BooleanInput[i + 2000].BoolValue = true;
                                         numberOfArea++;
                                     }
                                     else
-                                        links[3].BooleanInput[i + 2000].BoolValue = false;
+                                        nameSave.BooleanInput[i + 2000].BoolValue = false;
                                 }
 
-                                links[3].UShortInput[1].UShortValue = numberOfArea;
+                                nameSave.UShortInput[1].UShortValue = numberOfArea;
                             }
                             catch
                             {
@@ -328,10 +314,43 @@ namespace CBL_V2
                         #endregion
 
 
+                        #region Set and Save
+
+                        if (nameSave.BooleanOutput[2000].BoolValue == true)
+                        {
+                            numberOfAreas = Convert.ToUInt16(nameSave.StringOutput[2].StringValue);
+                            nameSave.UShortInput[1].UShortValue = numberOfAreas;
+
+                            for (uint i = 0; i < 100; i++)
+                            {
+                                if (i < numberOfAreas)
+                                {
+                                    nameSave.BooleanInput[i + 2000].BoolValue = true;
+                                    zoneAreaData[1, i + 1] = "1";
+                                }
+                                else
+                                {
+                                    nameSave.BooleanInput[i + 2000].BoolValue = false;
+                                    zoneAreaData[1, i + 1] = "0";
+                                }
+                            }
+                            xlsheet.WriteExcel(zoneAreaData, FilePath, 1);
+                        }
+                        #endregion
+
+
+
+
+
+                        #region Zone area E1 to E7
+
+                        #region Number of Areas
+
+
                         #endregion
 
                         #region Zone Area
-                        for (uint k = 0; k < 4; k++)
+                        for (uint k = 0; k < 7; k++)
                         {
                             uint areaIndex = args.Sig.Number / (numberOfZones + 2);
                             uint areaNumber = areaIndex + 1;
@@ -363,41 +382,7 @@ namespace CBL_V2
                         }
                         #endregion
 
-                        #region Name
-                        // Save
-                        if (links[4].BooleanOutput[args.Sig.Number].BoolValue == true)
-                        {
-                            for (uint i = 1; i < 301; i++)
-                            {
-                                if (links[4].BooleanOutput[i].BoolValue == true)
-                                {
 
-                                    if (i < 251)
-                                        zoneAreaData[i + 1, 0] = links[4].StringOutput[1].StringValue;
-
-                                    if (i > 250)
-                                        zoneAreaData[0, i - 250] = links[4].StringOutput[1].StringValue;
-
-                                }
-                            }
-                            xlsheet.WriteExcel(zoneAreaData, FilePath, 1);
-                        }
-
-                        if (links[4].BooleanOutput[301].BoolValue == true)
-                            for (uint i = 1; i < 301; i++)
-                            {
-
-                                if (i < 251)
-                                    links[4].StringInput[i].StringValue = zoneAreaData[i + 1, 0];
-
-                                if (i > 250)
-                                    links[4].StringInput[i].StringValue = zoneAreaData[0, i - 250];
-
-
-                            }
-
-
-                        #endregion
                         #endregion
 
 
@@ -416,11 +401,20 @@ namespace CBL_V2
         {
             try
             {
+                #region Info Ret
+                InfoRet();
+                #endregion
 
 
                 #region EISC Reg
 
-                for (uint i = 0; i < 5; i++)
+                nameSave = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0xD0, "127.0.0.2", this); // 208 is IPID D0
+                if (nameSave.Register() == eDeviceRegistrationUnRegistrationResponse.Success)
+                    nameSave.SigChange += Eisc_SigChange;
+                else
+                    CrestronConsole.PrintLine("EISC not registered");
+
+                for (uint i = 0; i < 7; i++)
                 {
                     links[i] = new ThreeSeriesTcpIpEthernetIntersystemCommunications(225 + i, "127.0.0.2", this); // 225 is IPID E1
                     if (links[i].Register() == eDeviceRegistrationUnRegistrationResponse.Success)
@@ -438,17 +432,45 @@ namespace CBL_V2
                     else
                         CrestronConsole.PrintLine("EISC not registered");
                 }
+
+
                 #endregion
 
-                #region Info Ret
-                InfoRet();
-                #endregion
+
 
             }
             catch (Exception e)
             {
                 CrestronConsole.PrintLine("Error in InitializeSystem: {0}", e.Message);
             }
+        }
+
+        private void InfoRet()
+        {
+
+            try  // Scene Retrieve
+            {
+
+                // RET Excel with 1st Row and Column as index 0,0
+                sceneData = xlsheet.ReadExcel(FilePath, 0);
+                zoneAreaData = xlsheet.ReadExcel(FilePath, 1);
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine(ex.ToString());
+            }
+        }
+        private void RET(string args)
+        {
+
+            tempdata = xlsheet.ReadExcel(FilePath, 1);
+
+
+            for (uint i = 0; i < 101; i++)
+            {
+                CrestronConsole.PrintLine(tempdata[1, i].ToString());
+            }
+
         }
 
 
