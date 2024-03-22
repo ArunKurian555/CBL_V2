@@ -18,11 +18,15 @@ namespace CBL_V2
         string FilePath = "/nvram/Settings.xlsx";
         ThreeSeriesTcpIpEthernetIntersystemCommunications[] links = new ThreeSeriesTcpIpEthernetIntersystemCommunications[7];
         ThreeSeriesTcpIpEthernetIntersystemCommunications[] scenes = new ThreeSeriesTcpIpEthernetIntersystemCommunications[8];
+
         private ThreeSeriesTcpIpEthernetIntersystemCommunications nameSave;
+        private ThreeSeriesTcpIpEthernetIntersystemCommunications api;
+
 
         uint numberOfZones = 250;
         bool[] activeZones = new bool[250];
         string[,] sceneData, zoneAreaData, tempdata;
+        ushort[] zoneLevels = new ushort[300];
 
         public ControlSystem()
             : base()
@@ -388,11 +392,19 @@ namespace CBL_V2
 
 
                         break;
+
+                    case eSigType.UShort:
+
+                        zoneLevels[args.Sig.Number] = api.UShortOutput[args.Sig.Number].UShortValue;
+                        CrestronConsole.PrintLine("Zone "+ args.Sig.Number.ToString() + "at level" + zoneLevels[args.Sig.Number].ToString());
+
+                        break;
                 }
             }
             catch (Exception ex)
             {
                 CrestronConsole.PrintLine(ex.ToString());
+
             }
 
         }
@@ -408,11 +420,22 @@ namespace CBL_V2
 
                 #region EISC Reg
 
+
+                api = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0xC1, "127.0.0.2", this);
+                if (api.Register() == eDeviceRegistrationUnRegistrationResponse.Success)
+                    api.SigChange += Eisc_SigChange;
+                else
+                    CrestronConsole.PrintLine("EISC not registered");
+
+
                 nameSave = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0xD0, "127.0.0.2", this); // 208 is IPID D0
                 if (nameSave.Register() == eDeviceRegistrationUnRegistrationResponse.Success)
                     nameSave.SigChange += Eisc_SigChange;
                 else
                     CrestronConsole.PrintLine("EISC not registered");
+
+
+
 
                 for (uint i = 0; i < 7; i++)
                 {
